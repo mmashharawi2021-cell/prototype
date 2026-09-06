@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Atlas Descent — Earth & Clouds V19</title>
+<style>
+html,body{margin:0;background:#020611;overflow-x:hidden}body{height:1000.5vh;touch-action:pan-y}
+#stage,#cloudFx,#mist{position:fixed;inset:0;width:100%;height:100dvh;pointer-events:none}
+#stage{overflow:hidden;background:#020611}#stage canvas,#cloudFx{display:block;width:100%;height:100%}
+#cloudFx{z-index:3}#mist{z-index:4;opacity:0;background:linear-gradient(180deg,rgba(225,232,235,.08),rgba(173,185,190,.22));filter:blur(5px);will-change:opacity}
+</style>
+</head>
+<body><div id="stage"></div><canvas id="cloudFx"></canvas><div id="mist"></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+const TOTAL=10.005,EARTH_END=2.12,CLOUD_END=4.82;
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),seg=(t,a,b)=>clamp((t-a)/(b-a)),lerp=(a,b,t)=>a+(b-a)*t,ease=t=>t*t*(3-2*t);
+function rng(seed=1){let a=seed>>>0;return()=>{a|=0;a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296}}const R=rng(18092026);
+
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x020611);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.008,1200);
+const renderer=new THREE.WebGLRenderer({antialias:innerWidth>800,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,innerWidth<768?1.05:1.55));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.02;document.getElementById('stage').appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xd7e1e8,0x343c43,.82));const sun=new THREE.DirectionalLight(0xfff8ed,3.6);sun.position.set(7,5,8);scene.add(sun);
+
+const starN=2600,sp=new Float32Array(starN*3);for(let i=0;i<starN;i++){const r=70+R()*130,th=Math.acos(2*R()-1),ph=R()*Math.PI*2;sp[i*3]=r*Math.sin(th)*Math.cos(ph);sp[i*3+1]=r*Math.cos(th);sp[i*3+2]=r*Math.sin(th)*Math.sin(ph)}const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.BufferAttribute(sp,3));const stars=new THREE.Points(sg,new THREE.PointsMaterial({size:.19,color:0xc3d0de,transparent:true,opacity:.78}));scene.add(stars);
+
+const loader=new THREE.TextureLoader(),base='https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/';
+const earthGroup=new THREE.Group();scene.add(earthGroup);earthGroup.rotation.set(.25,-.02,-.035);
+const earthMat=new THREE.MeshPhongMaterial({color:0xffffff,shininess:9,specular:0x253649,transparent:true});
+loader.load(base+'earth_atmos_2048.jpg',t=>{t.colorSpace=THREE.SRGBColorSpace;earthMat.map=t;earthMat.needsUpdate=true});
+loader.load(base+'earth_normal_2048.jpg',t=>{earthMat.normalMap=t;earthMat.normalScale.set(.45,.45);earthMat.needsUpdate=true});
+loader.load(base+'earth_specular_2048.jpg',t=>{earthMat.specularMap=t;earthMat.needsUpdate=true});
+const earth=new THREE.Mesh(new THREE.SphereGeometry(1,112,112),earthMat);earthGroup.add(earth);
+const cloudMat=new THREE.MeshLambertMaterial({transparent:true,opacity:.52,depthWrite:false,color:0xffffff});loader.load(base+'earth_clouds_1024.png',t=>{t.colorSpace=THREE.SRGBColorSpace;cloudMat.map=t;cloudMat.needsUpdate=true});const earthClouds=new THREE.Mesh(new THREE.SphereGeometry(1.006,84,84),cloudMat);earthGroup.add(earthClouds);
+
+const atmoU={uOpacity:{value:.22},uColor:{value:new THREE.Color(0x86bde4)}};
+const atmo=new THREE.Mesh(new THREE.SphereGeometry(1.026,84,84),new THREE.ShaderMaterial({transparent:true,side:THREE.BackSide,depthWrite:false,blending:THREE.AdditiveBlending,uniforms:atmoU,vertexShader:`varying vec3 n,v;void main(){vec4 w=modelMatrix*vec4(position,1.);n=normalize(mat3(modelMatrix)*normal);v=normalize(cameraPosition-w.xyz);gl_Position=projectionMatrix*viewMatrix*w;}`,fragmentShader:`uniform float uOpacity;uniform vec3 uColor;varying vec3 n,v;void main(){float rim=pow(1.-max(dot(n,v),0.),5.4);gl_FragColor=vec4(uColor,rim*uOpacity);}`}));earthGroup.add(atmo);
+
+const earthKeys=[[0,4.05,48],[.55,4.00,48],[1.0,3.58,48.5],[1.30,2.86,50],[1.55,2.15,53],[1.78,1.55,58],[1.96,1.20,64],[2.12,1.025,69]];
+function earthSample(t){for(let i=1;i<earthKeys.length;i++){const a=earthKeys[i-1],b=earthKeys[i];if(t<=b[0]){const q=ease(clamp((t-a[0])/(b[0]-a[0])));return{z:lerp(a[1],b[1],q),f:lerp(a[2],b[2],q)}}}return{z:1.025,f:69}}
+
+const fx=document.getElementById('cloudFx'),ctx=fx.getContext('2d',{alpha:true}),mist=document.getElementById('mist');let W=0,H=0,DPR=1;
+function resizeFx(){DPR=Math.min(devicePixelRatio||1,1.2);W=innerWidth;H=innerHeight;fx.width=Math.round(W*DPR);fx.height=Math.round(H*DPR);fx.style.width=W+'px';fx.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0)}resizeFx();
+
+function makeCluster(seed,shade=0){
+  const rr=rng(seed),n=320,mask=document.createElement('canvas'),blur=document.createElement('canvas'),c=document.createElement('canvas');
+  mask.width=mask.height=blur.width=blur.height=c.width=c.height=n;
+  const m=mask.getContext('2d'),b=blur.getContext('2d'),x=c.getContext('2d');
+  m.clearRect(0,0,n,n);
+  m.globalCompositeOperation='lighter';
+  for(let i=0;i<92;i++){
+    const ang=rr()*Math.PI*2,rad=Math.pow(rr(),.72)*n*.235;
+    const px=n*.5+Math.cos(ang)*rad,py=n*(.49+Math.sin(ang)*rad/n*.56);
+    const sx=n*(.060+rr()*.085),sy=sx*(.68+rr()*.50);
+    const g=m.createRadialGradient(px-sx*.12,py-sy*.16,0,px,py,Math.max(sx,sy));
+    g.addColorStop(0,'rgba(255,255,255,.34)');
+    g.addColorStop(.48,'rgba(255,255,255,.25)');
+    g.addColorStop(.78,'rgba(255,255,255,.12)');
+    g.addColorStop(1,'rgba(255,255,255,0)');
+    m.save();m.translate(px,py);m.scale(1,sy/sx);m.translate(-px,-py);
+    m.fillStyle=g;m.beginPath();m.arc(px,py,sx,0,Math.PI*2);m.fill();m.restore();
+  }
+  const baseG=m.createRadialGradient(n*.50,n*.59,0,n*.50,n*.59,n*.31);
+  baseG.addColorStop(0,'rgba(255,255,255,.30)');baseG.addColorStop(.72,'rgba(255,255,255,.16)');baseG.addColorStop(1,'rgba(255,255,255,0)');
+  m.fillStyle=baseG;m.beginPath();m.ellipse(n*.5,n*.59,n*.31,n*.17,0,0,Math.PI*2);m.fill();
+
+  b.filter='blur(8px)';b.drawImage(mask,0,0);b.filter='none';
+  const md=b.getImageData(0,0,n,n).data,out=x.createImageData(n,n),d=out.data;
+  for(let py=0;py<n;py++)for(let px=0;px<n;px++){
+    const i=(py*n+px)*4,ma=md[i+3]/255;
+    const a=clamp((ma-.055)/.38);
+    if(a<=0){d[i+3]=0;continue}
+    const vertical=py/n;
+    const edge=1-a;
+    const softNoise=(Math.sin(px*.085+seed)+Math.sin(py*.071+seed*.3))*2.2;
+    let lum=lerp(250-shade*8,178-shade*12,vertical*.82)+softNoise-edge*12;
+    lum=clamp(lum,130,255);
+    d[i]=lum;d[i+1]=clamp(lum+3,0,255);d[i+2]=clamp(lum+5,0,255);
+    d[i+3]=Math.round(255*Math.pow(a,.78));
+  }
+  x.putImageData(out,0,0);
+  x.globalCompositeOperation='source-atop';
+  const sh=x.createLinearGradient(0,n*.40,0,n*.86);
+  sh.addColorStop(0,'rgba(75,88,95,0)');sh.addColorStop(.62,`rgba(${105-shade*6},${116-shade*5},${121-shade*4},.10)`);sh.addColorStop(1,`rgba(${88-shade*5},${100-shade*5},${106-shade*4},.22)`);
+  x.fillStyle=sh;x.fillRect(0,0,n,n);x.globalCompositeOperation='source-over';
+  return c
+}
+const cloudTex=[makeCluster(1801,0),makeCluster(1802,1),makeCluster(1803,2),makeCluster(1804,0)];
+const field=[];for(let i=0;i<27;i++)field.push({x:(R()-.5)*2.35,y:(R()-.5)*1.05,z:.10+R()*2.0,s:.38+R()*.56,tex:Math.floor(R()*cloudTex.length)});
+for(let i=0;i<10;i++){const side=i%2?1:-1;field.push({x:side*(.38+R()*.54),y:(R()-.5)*.40,z:.12+i*.19,s:.58+R()*.46,tex:i%4})}
+
+function drawClouds(t){ctx.clearRect(0,0,W,H);const q=seg(t,EARTH_END,CLOUD_END);if(q<=0||q>=1.04){fx.style.opacity='0';return}const fadeIn=ease(seg(t,2.08,2.30)),fadeOut=1-ease(seg(t,4.70,4.98));fx.style.opacity=String(fadeIn*fadeOut);
+  const over=ease(seg(t,2.60,4.10));const sky=ctx.createLinearGradient(0,0,0,H);const mix=(a,b,m)=>Math.round(lerp(a,b,m));const topA=[7,43,91],topB=[126,135,137],horA=[98,174,221],horB=[194,200,199];sky.addColorStop(0,`rgb(${mix(topA[0],topB[0],over)},${mix(topA[1],topB[1],over)},${mix(topA[2],topB[2],over)})`);sky.addColorStop(.55,`rgb(${mix(horA[0],horB[0],over)},${mix(horA[1],horB[1],over)},${mix(horA[2],horB[2],over)})`);sky.addColorStop(1,`rgb(${mix(184,204,over)},${mix(210,204,over)},${mix(225,205,over)})`);ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+  ctx.save();ctx.globalAlpha=.82*(1-seg(q,.78,.985));for(let i=0;i<10;i++){const x=(i/9)*W-54,y=H*(.57+.020*Math.sin(i*1.8)),s=W*(.24+.025*(i%3));ctx.drawImage(cloudTex[i%4],x-s*.5,y-s*.30,s,s*.62)}ctx.restore();
+  const ordered=[...field].sort((a,b)=>b.z-a.z);for(const c of ordered){let z=c.z-q*2.06;while(z<.055)z+=2.06;const inv=1/(.13+z),cx=W*.5+c.x*W*.28*inv,cy=H*.49+c.y*H*.22*inv,s=c.s*Math.min(W,H)*.88*inv,alpha=clamp((1-z/2.2)*1.22,.16,.94);ctx.globalAlpha=alpha;ctx.drawImage(cloudTex[c.tex],cx-s*.5,cy-s*.40,s,s*.80)}ctx.globalAlpha=1;
+  const inside=Math.sin(seg(t,2.92,4.50)*Math.PI);if(inside>0){ctx.save();ctx.globalAlpha=.30*inside;const s=Math.max(W,H)*1.02;ctx.drawImage(cloudTex[2],-s*.54,H*.00,s,s*.78);ctx.drawImage(cloudTex[1],W-s*.48,H*.14,s,s*.78);ctx.restore()}
+}
+
+let smoothP=0,last=performance.now();function frame(now){requestAnimationFrame(frame);const dt=Math.min((now-last)/1000,.05);last=now;const max=document.documentElement.scrollHeight-innerHeight,target=max>0?scrollY/max:0;smoothP+=(target-smoothP)*(1-Math.exp(-8.0*dt));const t=smoothP*TOTAL;
+ const ek=earthSample(Math.min(t,EARTH_END));camera.position.set(0,0.012,ek.z);camera.lookAt(0,0.015,0);camera.fov=ek.f;camera.updateProjectionMatrix();earth.rotation.y+=dt*.004;earthClouds.rotation.y+=dt*.009;
+ const ef=1-ease(seg(t,2.04,2.27));earthGroup.visible=ef>.004;stars.visible=ef>.004;earthMat.opacity=ef;cloudMat.opacity=.52*ef;atmoU.uOpacity.value=.22*ef*(1+seg(t,1.55,2.08)*.22);scene.background.set(t>2.04?0x7999aa:0x020611);renderer.render(scene,camera);
+ drawClouds(t);const dense=seg(t,3.12,3.62)*(1-seg(t,4.18,4.65));mist.style.opacity=String((.03+.22*dense)*(t>2.16&&t<4.78?1:0));}
+requestAnimationFrame(frame);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,innerWidth<768?1.05:1.55));resizeFx()});
+</script></body></html>
