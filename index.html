@@ -1,154 +1,31 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Atlas Descent 3D — Street Fly-through Polish V16</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Atlas Descent 3D — Gaza Sequence V17</title>
 <style>
-:root{--mix:0;--grade:0}
-*{box-sizing:border-box}
-html,body{margin:0;background:#020611;overflow-x:hidden}
-html{overscroll-behavior-y:none}
-body{height:1000.5vh;touch-action:pan-y}
-#baseWrap,#cityWrap,#grade{position:fixed;inset:0;width:100%;height:100dvh;pointer-events:none;overflow:hidden}
-#base{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;pointer-events:none}
-#city{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-#city canvas{display:block;width:100%!important;height:100%!important}
-#baseWrap{opacity:calc(1 - var(--mix));will-change:opacity}
-#cityWrap{opacity:var(--mix);filter:saturate(.80) contrast(.975) brightness(.985);will-change:opacity}
-#grade{
- z-index:10;
- background:
-  linear-gradient(to bottom,rgba(16,25,28,0),rgba(70,79,74,.03)),
-  radial-gradient(circle at 50% 46%,rgba(255,255,255,0) 60%,rgba(23,27,25,.045) 100%);
- opacity:var(--grade);mix-blend-mode:multiply
-}
+:root{--mix:0;--grade:0;--end:0}*{box-sizing:border-box}html,body{margin:0;background:#020611;overflow-x:hidden}html{overscroll-behavior-y:none}body{height:1000.5vh;touch-action:pan-y}
+#baseWrap,#cityWrap,#grade,#endTitle{position:fixed;inset:0;width:100%;height:100dvh;pointer-events:none;overflow:hidden}
+#base{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#020611}#city{position:absolute;inset:0;width:100%;height:100%}#city canvas{display:block;width:100%!important;height:100%!important}
+#baseWrap{opacity:calc(1 - var(--mix));will-change:opacity}#cityWrap{opacity:var(--mix);filter:saturate(.82) contrast(.985) brightness(.99);will-change:opacity}
+#grade{z-index:10;background:linear-gradient(to bottom,rgba(18,26,28,0),rgba(62,70,66,.035)),radial-gradient(circle at 50% 48%,rgba(255,255,255,0) 61%,rgba(18,22,20,.05) 100%);opacity:var(--grade);mix-blend-mode:multiply}
+#endTitle{z-index:20;display:flex;align-items:center;justify-content:center;text-align:center;opacity:var(--end);transform:translateY(calc((1 - var(--end))*18px));will-change:opacity,transform;background:linear-gradient(to bottom,transparent 52%,rgba(13,17,16,.17) 100%)}
+#endTitle .inner{margin-top:36vh;padding:0 22px;color:#f2f3ef;text-shadow:0 2px 18px rgba(0,0,0,.42)}#endTitle .name{font:600 clamp(22px,5.5vw,48px)/1.08 Arial,sans-serif;letter-spacing:.08em;text-transform:uppercase}#endTitle .role{margin-top:10px;font:500 clamp(11px,2.8vw,17px)/1 Arial,sans-serif;letter-spacing:.30em;text-transform:uppercase;opacity:.78}
 </style>
 </head>
 <body>
-<div id="baseWrap"><iframe id="base" src="./base-v12.html?v=16" title="Earth and cloud sequence"></iframe></div>
-<div id="cityWrap"><div id="city"></div></div>
-<div id="grade"></div>
+<div id="baseWrap"><iframe id="base" src="./base-v17.html?v=17" title="Earth and cloud sequence"></iframe></div>
+<div id="cityWrap"><div id="city"></div></div><div id="grade"></div>
+<div id="endTitle"><div class="inner"><div class="name">Mohanad Al-Mashharawi</div><div class="role">GIS Engineer</div></div></div>
 <script>
-const TOTAL=10.005;
-const CITY_PEEK=4.72;
-const CLOUD_END=4.82;
-const CITY_FULL=5.10;
-const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
-const ease=t=>t*t*(3-2*t);
-const root=document.documentElement,base=document.getElementById('base');
-let cityReady=false,baseReady=false,last=-1,target=0;
-function progress(){const m=document.documentElement.scrollHeight-innerHeight;return m>0?clamp(scrollY/m):0}
-function update(){target=progress()}
-addEventListener('scroll',update,{passive:true});
-addEventListener('resize',update,{passive:true});
-base.addEventListener('load',()=>{baseReady=true;update()});
-addEventListener('atlas-city-ready',()=>{cityReady=true});
-addEventListener('atlas-city-lost',()=>{cityReady=false});
-update();
-function frame(){
- requestAnimationFrame(frame);
- const p=target,t=p*TOTAL;
- const mix=cityReady?ease(clamp((t-CITY_PEEK)/(CITY_FULL-CITY_PEEK))):0;
- root.style.setProperty('--mix',mix.toFixed(4));
- const grade=cityReady?ease(clamp((t-4.78)/(5.34-4.78))):0;
- root.style.setProperty('--grade',grade.toFixed(4));
- if(baseReady){
-   const baseTime=Math.min(t,CLOUD_END),baseP=baseTime/TOTAL;
-   if(Math.abs(baseP-last)>.00001){
-     try{const w=base.contentWindow,m=w.document.documentElement.scrollHeight-w.innerHeight;w.scrollTo(0,baseP*m);last=baseP}catch(e){}
-   }
- }
-}
+const TOTAL=10.005,CITY_PEEK=4.72,CLOUD_END=4.82,CITY_FULL=5.10;
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),ease=t=>t*t*(3-2*t);
+const root=document.documentElement,base=document.getElementById('base');let cityReady=false,baseReady=false,last=-1,target=0;
+function progress(){const m=document.documentElement.scrollHeight-innerHeight;return m>0?clamp(scrollY/m):0}function update(){target=progress()}
+addEventListener('scroll',update,{passive:true});addEventListener('resize',update,{passive:true});base.addEventListener('load',()=>{baseReady=true;update()});addEventListener('atlas-city-ready',()=>{cityReady=true});addEventListener('atlas-city-lost',()=>{cityReady=false});update();
+function frame(){requestAnimationFrame(frame);const p=target,t=p*TOTAL,mix=cityReady?ease(clamp((t-CITY_PEEK)/(CITY_FULL-CITY_PEEK))):0;root.style.setProperty('--mix',mix.toFixed(4));root.style.setProperty('--grade',(cityReady?ease(clamp((t-4.78)/.60)):0).toFixed(4));const end=cityReady?ease(clamp((t-9.30)/.48)):0;root.style.setProperty('--end',end.toFixed(4));if(baseReady){const bt=Math.min(t,CLOUD_END),bp=bt/TOTAL;if(Math.abs(bp-last)>.00001){try{const w=base.contentWindow,m=w.document.documentElement.scrollHeight-w.innerHeight;w.scrollTo(0,bp*m);last=bp}catch(e){}}}}
 requestAnimationFrame(frame);
 </script>
-<script type="module">
-const streetKeys=`const keys=[
- [4.82,0,34,58,0,12,-18,59],
- [5.20,0.35,31,30,0,11,-44,59.5],
- [5.60,-0.25,28,-4,0,10,-80,60],
- [6.00,0.40,25,-42,0,10,-114,60.5],
- [6.50,-0.45,23,-88,0,9,-160,61.5],
- [7.00,0.25,22,-132,0,9,-204,62.5],
- [7.50,-0.35,21,-171,0,9,-243,64],
- [8.00,0.45,20,-207,0,8,-278,66],
- [8.50,-0.30,19,-244,0,8,-316,66.5],
- [9.00,0.22,18,-286,0,7,-358,67],
- [9.50,-0.15,17,-330,0,7,-403,67],
- [10.005,0,16,-382,0,7,-456,67.5]
-];
-function sample(t){`;
-try{
-  const r=await fetch('./city-v13.js?v=16',{cache:'no-store'});
-  let src=await r.text();
-
-  // Keep the camera inside the street corridor.
-  src=src.replace(/const keys=\[[\s\S]*?\];\s*function sample\(t\)\{/,streetKeys);
-  src=src.replace('if(Math.abs(x)<25 && R()<.60) continue;','if(Math.abs(x)<32) continue;');
-  src=src.replace('if(Math.abs(x)<34 && R()<.62) continue;','if(Math.abs(x)<36) continue;');
-
-  // Large slabs stay mainly on the street edges; a few small fragments remain in the center.
-  src=src.replace(
-`  let x=(R()-.5)*230;
-  if(R()<.42) x=(R()>.5?1:-1)*(10+R()*62);
-  const ss=.9+R()*4.5;`,
-`  let x=(R()-.5)*230;
-  const centerPiece=R()<.16;
-  if(!centerPiece && Math.abs(x)<19) x=(x<0?-1:1)*(19+R()*58);
-  if(R()<.42) x=(R()>.5?1:-1)*(20+R()*60);
-  const ss=centerPiece?.45+R()*1.35:.9+R()*4.5;`
-  );
-
-  // Big rubble chunks are pushed out of the central driving line; small debris stays scattered there.
-  src=src.replace(
-`  const x=(R()-.5)*235;
-  const rr=.20+R()*1.55;`,
-`  let x=(R()-.5)*235;
-  const rr=.20+R()*1.55;
-  if(Math.abs(x)<13 && rr>.72) x=(x<0?-1:1)*(14+R()*42);`
-  );
-
-  // Smooth the camera and use a progressive city-speed curve: slower on entry, faster later.
-  src=src.replace(
-'let look=new THREE.Vector3(),last=performance.now(),readySent=false;',
-'let look=new THREE.Vector3(),camPos=new THREE.Vector3(),camReady=false,last=performance.now(),readySent=false;'
-  );
-  src=src.replace(
-'  const t=pct*10.005;',
-`  const t=pct*10.005;
-  const cityP=clamp((t-4.82)/(10.005-4.82));
-  const warpedT=t<=4.82?4.82:4.82+(10.005-4.82)*cityP*(.72+.28*cityP);
-  if(t<4.72) camReady=false;`
-  );
-  src=src.replace(
-`  const k=sample(Math.max(4.82,t));
-  camera.position.copy(k.pos);
-  look.lerp(k.look,1-Math.exp(-13*dt));`,
-`  const k=sample(warpedT);
-  if(!camReady){camPos.copy(k.pos);camReady=true}else camPos.lerp(k.pos,1-Math.exp(-18*dt));
-  camera.position.copy(camPos);
-  look.lerp(k.look,1-Math.exp(-16*dt));`
-  );
-
-  // More atmospheric depth: preserve distant skyline at entry, tighten fog gradually deeper in the fly-through.
-  src=src.replace(
-`  scene.fog.near=lerp(24,18,cp);
-  scene.fog.far=lerp(280,205,cp);
-  scene.fog.color.set(0xa9b0ab).lerp(new THREE.Color(0x9ba39e),cp*.35);
-  renderer.toneMappingExposure=lerp(.95,.90,cp);`,
-`  scene.fog.near=lerp(30,18,cp);
-  scene.fog.far=lerp(330,230,cp);
-  scene.fog.color.set(0xacb3ae).lerp(new THREE.Color(0x9ba39e),cp*.32);
-  renderer.toneMappingExposure=lerp(.96,.91,cp);`
-  );
-
-  const url=URL.createObjectURL(new Blob([src],{type:'text/javascript'}));
-  await import(url);
-  URL.revokeObjectURL(url);
-}catch(err){
-  console.error('City V16 patch failed',err);
-  window.dispatchEvent(new Event('atlas-city-lost'));
-}
-</script>
+<script type="module" src="./city-v17.js?v=17"></script>
 </body>
 </html>
