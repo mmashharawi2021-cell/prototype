@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Atlas Descent 3D — Final Sequence V14</title>
+<title>Atlas Descent 3D — Street Camera Fix V15</title>
 <style>
 :root{--mix:0;--grade:0}
 *{box-sizing:border-box}
@@ -26,7 +26,7 @@ body{height:1000.5vh;touch-action:pan-y}
 </style>
 </head>
 <body>
-<div id="baseWrap"><iframe id="base" src="./base-v12.html?v=14" title="Earth and cloud sequence"></iframe></div>
+<div id="baseWrap"><iframe id="base" src="./base-v12.html?v=15" title="Earth and cloud sequence"></iframe></div>
 <div id="cityWrap"><div id="city"></div></div>
 <div id="grade"></div>
 <script>
@@ -38,11 +38,7 @@ const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const ease=t=>t*t*(3-2*t);
 const root=document.documentElement,base=document.getElementById('base');
 let cityReady=false,baseReady=false,last=-1,target=0;
-
-function progress(){
-  const m=document.documentElement.scrollHeight-innerHeight;
-  return m>0?clamp(scrollY/m):0;
-}
+function progress(){const m=document.documentElement.scrollHeight-innerHeight;return m>0?clamp(scrollY/m):0}
 function update(){target=progress()}
 addEventListener('scroll',update,{passive:true});
 addEventListener('resize',update,{passive:true});
@@ -50,7 +46,6 @@ base.addEventListener('load',()=>{baseReady=true;update()});
 addEventListener('atlas-city-ready',()=>{cityReady=true});
 addEventListener('atlas-city-lost',()=>{cityReady=false});
 update();
-
 function frame(){
  requestAnimationFrame(frame);
  const p=target,t=p*TOTAL;
@@ -59,20 +54,43 @@ function frame(){
  const grade=cityReady?ease(clamp((t-4.78)/(5.34-4.78))):0;
  root.style.setProperty('--grade',grade.toFixed(4));
  if(baseReady){
-   const baseTime=Math.min(t,CLOUD_END);
-   const baseP=baseTime/TOTAL;
+   const baseTime=Math.min(t,CLOUD_END),baseP=baseTime/TOTAL;
    if(Math.abs(baseP-last)>.00001){
-     try{
-       const w=base.contentWindow;
-       const m=w.document.documentElement.scrollHeight-w.innerHeight;
-       w.scrollTo(0,baseP*m);
-       last=baseP;
-     }catch(e){}
+     try{const w=base.contentWindow,m=w.document.documentElement.scrollHeight-w.innerHeight;w.scrollTo(0,baseP*m);last=baseP}catch(e){}
    }
  }
 }
 requestAnimationFrame(frame);
 </script>
-<script type="module" src="./city-v13.js?v=14"></script>
+<script type="module">
+const streetKeys=`const keys=[
+ [4.82,0,34,58,0,12,-18,59],
+ [5.20,0.4,31,30,0,11,-44,59.5],
+ [5.60,-0.3,28,-4,0,10,-80,60],
+ [6.00,0.5,25,-42,0,10,-114,60.5],
+ [6.50,-0.6,23,-88,0,9,-160,61.5],
+ [7.00,0.3,22,-132,0,9,-204,62.5],
+ [7.50,-0.5,21,-171,0,9,-243,64],
+ [8.00,0.6,20,-207,0,8,-278,66],
+ [8.50,-0.4,19,-244,0,8,-316,66.5],
+ [9.00,0.3,18,-286,0,7,-358,67],
+ [9.50,-0.2,17,-330,0,7,-403,67],
+ [10.005,0,16,-382,0,7,-456,67.5]
+];
+function sample(t){`;
+try{
+  const r=await fetch('./city-v13.js?v=15',{cache:'no-store'});
+  let src=await r.text();
+  src=src.replace(/const keys=\[[\s\S]*?\];\s*function sample\(t\)\{/,streetKeys);
+  src=src.replace('if(Math.abs(x)<25 && R()<.60) continue;','if(Math.abs(x)<32) continue;');
+  src=src.replace('if(Math.abs(x)<34 && R()<.62) continue;','if(Math.abs(x)<36) continue;');
+  const url=URL.createObjectURL(new Blob([src],{type:'text/javascript'}));
+  await import(url);
+  URL.revokeObjectURL(url);
+}catch(err){
+  console.error('City camera patch failed',err);
+  window.dispatchEvent(new Event('atlas-city-lost'));
+}
+</script>
 </body>
 </html>
