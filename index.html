@@ -1,1 +1,96 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Atlas Descent 3D — City Match V5</title><style>html,body{margin:0;background:#020611;overflow-x:hidden}body{height:950vh}#base,#city{position:fixed;inset:0;width:100%;height:100%;border:0}#base{pointer-events:none}#city{pointer-events:none;opacity:0;transition:opacity .08s linear}iframe{display:block}</style></head><body><iframe id="base" src="./base-v4.html?v=5" title="Atlas Descent"></iframe><div id="city"></div><script>const f=document.getElementById('base');function sync(){try{const w=f.contentWindow,d=w.document.documentElement,m=d.scrollHeight-w.innerHeight,p=(document.documentElement.scrollHeight-innerHeight)>0?scrollY/(document.documentElement.scrollHeight-innerHeight):0;w.scrollTo(0,p*m)}catch(e){}}addEventListener('scroll',sync,{passive:true});addEventListener('resize',sync);f.addEventListener('load',sync);</script><script type="module" src="./city-v5.js?v=5"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Atlas Descent 3D — Final Match V6</title>
+<style>
+:root{--cityMix:0;--grade:0}
+*{box-sizing:border-box}
+html,body{margin:0;background:#020611;overflow-x:hidden}
+html{overscroll-behavior-y:none}
+body{height:1000.5vh;touch-action:pan-y}
+#baseWrap,#cityWrap,#grade{
+  position:fixed;inset:0;width:100%;height:100dvh;
+  pointer-events:none;overflow:hidden
+}
+#base,#city{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+#base{pointer-events:none}
+#city{pointer-events:none}
+#baseWrap{
+  opacity:calc(1 - var(--cityMix));
+  filter:saturate(calc(1 - var(--grade)*.18))
+         contrast(calc(1 - var(--grade)*.05))
+         brightness(calc(1 - var(--grade)*.03));
+  will-change:opacity,filter;
+}
+#cityWrap{
+  opacity:var(--cityMix);
+  filter:saturate(.78) contrast(.96) brightness(.94);
+  will-change:opacity,filter;
+}
+#grade{
+  z-index:10;
+  background:
+    linear-gradient(to bottom,rgba(8,20,27,.02),rgba(79,88,82,.055)),
+    radial-gradient(circle at 50% 45%,rgba(255,255,255,0) 46%,rgba(19,23,22,.12) 100%);
+  opacity:var(--grade);
+  mix-blend-mode:multiply;
+}
+@media (max-width:768px){
+  #cityWrap{filter:saturate(.76) contrast(.95) brightness(.95)}
+  #grade{background:linear-gradient(to bottom,rgba(8,20,27,.015),rgba(70,80,75,.045))}
+}
+</style>
+</head>
+<body>
+<div id="baseWrap"><iframe id="base" src="./base-v4.html?v=6" title="Atlas Descent base scene"></iframe></div>
+<div id="cityWrap"><div id="city"></div></div>
+<div id="grade"></div>
+
+<script>
+const TOTAL=10.005, CITY_IN=4.68, CITY_FULL=5.08;
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+const smooth=t=>t*t*(3-2*t);
+const root=document.documentElement;
+const base=document.getElementById('base');
+const baseWrap=document.getElementById('baseWrap');
+
+let target=0, lastApplied=-1, baseReady=false;
+function pageProgress(){
+  const max=document.documentElement.scrollHeight-innerHeight;
+  return max>0?clamp(scrollY/max):0;
+}
+function updateTarget(){ target=pageProgress(); }
+addEventListener('scroll',updateTarget,{passive:true});
+addEventListener('resize',updateTarget,{passive:true});
+base.addEventListener('load',()=>{baseReady=true;updateTarget()});
+updateTarget();
+
+function frame(){
+  requestAnimationFrame(frame);
+  const p=target;
+  const t=p*TOTAL;
+  let mix=clamp((t-CITY_IN)/(CITY_FULL-CITY_IN));
+  mix=smooth(mix);
+  const grade=smooth(clamp((t-4.20)/(5.35-4.20)));
+  root.style.setProperty('--cityMix',mix.toFixed(4));
+  root.style.setProperty('--grade',grade.toFixed(4));
+
+  baseWrap.style.visibility = t>5.34 ? 'hidden' : 'visible';
+
+  if(baseReady && Math.abs(p-lastApplied)>.00001){
+    try{
+      const w=base.contentWindow;
+      const d=w.document.documentElement;
+      const max=d.scrollHeight-w.innerHeight;
+      w.scrollTo(0,p*max);
+      lastApplied=p;
+    }catch(e){}
+  }
+}
+requestAnimationFrame(frame);
+</script>
+<script type="module" src="./city-v5.js?v=6"></script>
+</body>
+</html>
