@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Atlas Descent 3D — Street Camera Fix V15</title>
+<title>Atlas Descent 3D — Street Fly-through Polish V16</title>
 <style>
 :root{--mix:0;--grade:0}
 *{box-sizing:border-box}
@@ -26,7 +26,7 @@ body{height:1000.5vh;touch-action:pan-y}
 </style>
 </head>
 <body>
-<div id="baseWrap"><iframe id="base" src="./base-v12.html?v=15" title="Earth and cloud sequence"></iframe></div>
+<div id="baseWrap"><iframe id="base" src="./base-v12.html?v=16" title="Earth and cloud sequence"></iframe></div>
 <div id="cityWrap"><div id="city"></div></div>
 <div id="grade"></div>
 <script>
@@ -65,30 +65,88 @@ requestAnimationFrame(frame);
 <script type="module">
 const streetKeys=`const keys=[
  [4.82,0,34,58,0,12,-18,59],
- [5.20,0.4,31,30,0,11,-44,59.5],
- [5.60,-0.3,28,-4,0,10,-80,60],
- [6.00,0.5,25,-42,0,10,-114,60.5],
- [6.50,-0.6,23,-88,0,9,-160,61.5],
- [7.00,0.3,22,-132,0,9,-204,62.5],
- [7.50,-0.5,21,-171,0,9,-243,64],
- [8.00,0.6,20,-207,0,8,-278,66],
- [8.50,-0.4,19,-244,0,8,-316,66.5],
- [9.00,0.3,18,-286,0,7,-358,67],
- [9.50,-0.2,17,-330,0,7,-403,67],
+ [5.20,0.35,31,30,0,11,-44,59.5],
+ [5.60,-0.25,28,-4,0,10,-80,60],
+ [6.00,0.40,25,-42,0,10,-114,60.5],
+ [6.50,-0.45,23,-88,0,9,-160,61.5],
+ [7.00,0.25,22,-132,0,9,-204,62.5],
+ [7.50,-0.35,21,-171,0,9,-243,64],
+ [8.00,0.45,20,-207,0,8,-278,66],
+ [8.50,-0.30,19,-244,0,8,-316,66.5],
+ [9.00,0.22,18,-286,0,7,-358,67],
+ [9.50,-0.15,17,-330,0,7,-403,67],
  [10.005,0,16,-382,0,7,-456,67.5]
 ];
 function sample(t){`;
 try{
-  const r=await fetch('./city-v13.js?v=15',{cache:'no-store'});
+  const r=await fetch('./city-v13.js?v=16',{cache:'no-store'});
   let src=await r.text();
+
+  // Keep the camera inside the street corridor.
   src=src.replace(/const keys=\[[\s\S]*?\];\s*function sample\(t\)\{/,streetKeys);
   src=src.replace('if(Math.abs(x)<25 && R()<.60) continue;','if(Math.abs(x)<32) continue;');
   src=src.replace('if(Math.abs(x)<34 && R()<.62) continue;','if(Math.abs(x)<36) continue;');
+
+  // Large slabs stay mainly on the street edges; a few small fragments remain in the center.
+  src=src.replace(
+`  let x=(R()-.5)*230;
+  if(R()<.42) x=(R()>.5?1:-1)*(10+R()*62);
+  const ss=.9+R()*4.5;`,
+`  let x=(R()-.5)*230;
+  const centerPiece=R()<.16;
+  if(!centerPiece && Math.abs(x)<19) x=(x<0?-1:1)*(19+R()*58);
+  if(R()<.42) x=(R()>.5?1:-1)*(20+R()*60);
+  const ss=centerPiece?.45+R()*1.35:.9+R()*4.5;`
+  );
+
+  // Big rubble chunks are pushed out of the central driving line; small debris stays scattered there.
+  src=src.replace(
+`  const x=(R()-.5)*235;
+  const rr=.20+R()*1.55;`,
+`  let x=(R()-.5)*235;
+  const rr=.20+R()*1.55;
+  if(Math.abs(x)<13 && rr>.72) x=(x<0?-1:1)*(14+R()*42);`
+  );
+
+  // Smooth the camera and use a progressive city-speed curve: slower on entry, faster later.
+  src=src.replace(
+'let look=new THREE.Vector3(),last=performance.now(),readySent=false;',
+'let look=new THREE.Vector3(),camPos=new THREE.Vector3(),camReady=false,last=performance.now(),readySent=false;'
+  );
+  src=src.replace(
+'  const t=pct*10.005;',
+`  const t=pct*10.005;
+  const cityP=clamp((t-4.82)/(10.005-4.82));
+  const warpedT=t<=4.82?4.82:4.82+(10.005-4.82)*cityP*(.72+.28*cityP);
+  if(t<4.72) camReady=false;`
+  );
+  src=src.replace(
+`  const k=sample(Math.max(4.82,t));
+  camera.position.copy(k.pos);
+  look.lerp(k.look,1-Math.exp(-13*dt));`,
+`  const k=sample(warpedT);
+  if(!camReady){camPos.copy(k.pos);camReady=true}else camPos.lerp(k.pos,1-Math.exp(-18*dt));
+  camera.position.copy(camPos);
+  look.lerp(k.look,1-Math.exp(-16*dt));`
+  );
+
+  // More atmospheric depth: preserve distant skyline at entry, tighten fog gradually deeper in the fly-through.
+  src=src.replace(
+`  scene.fog.near=lerp(24,18,cp);
+  scene.fog.far=lerp(280,205,cp);
+  scene.fog.color.set(0xa9b0ab).lerp(new THREE.Color(0x9ba39e),cp*.35);
+  renderer.toneMappingExposure=lerp(.95,.90,cp);`,
+`  scene.fog.near=lerp(30,18,cp);
+  scene.fog.far=lerp(330,230,cp);
+  scene.fog.color.set(0xacb3ae).lerp(new THREE.Color(0x9ba39e),cp*.32);
+  renderer.toneMappingExposure=lerp(.96,.91,cp);`
+  );
+
   const url=URL.createObjectURL(new Blob([src],{type:'text/javascript'}));
   await import(url);
   URL.revokeObjectURL(url);
 }catch(err){
-  console.error('City camera patch failed',err);
+  console.error('City V16 patch failed',err);
   window.dispatchEvent(new Event('atlas-city-lost'));
 }
 </script>
