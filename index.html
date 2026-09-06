@@ -3,17 +3,19 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Atlas Descent 3D — V2</title>
+<title>Atlas Descent 3D — Earth Match V3</title>
 <style>
 html,body{margin:0;background:#020611;overflow-x:hidden}
 body{height:950vh}
 #stage{position:fixed;inset:0;overflow:hidden;background:#020611}
 canvas{display:block;width:100%;height:100%}
-#badge{position:fixed;top:12px;right:14px;color:#dfe7ef;font:10px/1.2 system-ui;letter-spacing:.16em;opacity:.22;pointer-events:none}
+#spark{position:fixed;right:6.2vw;bottom:15.2vh;width:18px;height:18px;opacity:.34;pointer-events:none;filter:drop-shadow(0 0 7px rgba(205,228,255,.35))}
+#spark:before,#spark:after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:linear-gradient(90deg,transparent,rgba(218,235,249,.95),transparent)}
+#spark:before{width:18px;height:1px}#spark:after{width:1px;height:18px;background:linear-gradient(180deg,transparent,rgba(218,235,249,.95),transparent)}
 </style>
 </head>
 <body>
-<div id="stage"></div><div id="badge">ATLAS DESCENT • V2</div>
+<div id="stage"></div><div id="spark"></div>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 
@@ -28,7 +30,7 @@ const R=rng(20260907);
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x020611);
 scene.fog=new THREE.Fog(0x9aa3a5,1000,2000);
-const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.03,1800);
+const camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,.008,1800);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio, innerWidth<768?1.35:1.8));
 renderer.setSize(innerWidth,innerHeight);
@@ -53,7 +55,7 @@ const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.BufferA
 spaceGroup.add(new THREE.Points(sg,new THREE.PointsMaterial({size:.24,vertexColors:true,transparent:true,opacity:.9,sizeAttenuation:true})));
 
 function nebulaTexture(){const s=512,c=document.createElement('canvas');c.width=c.height=s;const x=c.getContext('2d');x.fillStyle='#020611';x.fillRect(0,0,s,s);for(let i=0;i<28;i++){const px=R()*s,py=R()*s,rr=70+R()*170;const g=x.createRadialGradient(px,py,0,px,py,rr);g.addColorStop(0,`rgba(${20+R()*25|0},${45+R()*45|0},${90+R()*60|0},${.018+R()*.025})`);g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,s,s)}return new THREE.CanvasTexture(c)}
-const nebula=new THREE.Sprite(new THREE.SpriteMaterial({map:nebulaTexture(),transparent:true,opacity:.72,depthWrite:false}));nebula.scale.set(140,90,1);nebula.position.set(0,0,-40);spaceGroup.add(nebula);
+const nebula=new THREE.Sprite(new THREE.SpriteMaterial({map:nebulaTexture(),transparent:true,opacity:.72,depthWrite:false}));nebula.scale.set(185,104,1);nebula.position.set(-8,2,-40);nebula.material.opacity=.86;spaceGroup.add(nebula);
 
 const earthGroup=new THREE.Group();scene.add(earthGroup);
 const loader=new THREE.TextureLoader();
@@ -63,12 +65,13 @@ loader.load(base+'earth_atmos_2048.jpg',t=>{t.colorSpace=THREE.SRGBColorSpace;ea
 loader.load(base+'earth_normal_2048.jpg',t=>{earthMat.normalMap=t;earthMat.normalScale.set(.55,.55);earthMat.needsUpdate=true});
 loader.load(base+'earth_specular_2048.jpg',t=>{earthMat.specularMap=t;earthMat.needsUpdate=true});
 const earth=new THREE.Mesh(new THREE.SphereGeometry(1,128,128),earthMat);earthGroup.add(earth);
-const cloudMat=new THREE.MeshLambertMaterial({transparent:true,opacity:.53,depthWrite:false,color:0xffffff});
+const cloudMat=new THREE.MeshLambertMaterial({transparent:true,opacity:.62,depthWrite:false,color:0xffffff});
 loader.load(base+'earth_clouds_1024.png',t=>{t.colorSpace=THREE.SRGBColorSpace;cloudMat.map=t;cloudMat.needsUpdate=true});
 const earthClouds=new THREE.Mesh(new THREE.SphereGeometry(1.011,96,96),cloudMat);earthGroup.add(earthClouds);
-earthGroup.rotation.set(-.11,-1.84,-.07);
+// Reference centers North America / Gulf of Mexico in the approach
+earthGroup.rotation.set(.27,0,-.045);
 
-const atmoUniforms={uPower:{value:1.05},uOpacity:{value:.82},uColor:{value:new THREE.Color(0x73b8ff)}};
+const atmoUniforms={uPower:{value:1.22},uOpacity:{value:.92},uColor:{value:new THREE.Color(0x72c3ff)}};
 const atmo=new THREE.Mesh(new THREE.SphereGeometry(1.08,96,96),new THREE.ShaderMaterial({transparent:true,side:THREE.BackSide,depthWrite:false,blending:THREE.AdditiveBlending,uniforms:atmoUniforms,vertexShader:`varying vec3 n,v;void main(){vec4 w=modelMatrix*vec4(position,1.);n=normalize(mat3(modelMatrix)*normal);v=normalize(cameraPosition-w.xyz);gl_Position=projectionMatrix*viewMatrix*w;}`,fragmentShader:`uniform float uPower,uOpacity;uniform vec3 uColor;varying vec3 n,v;void main(){float rim=pow(1.-max(dot(n,v),0.),3.6);gl_FragColor=vec4(uColor,rim*uOpacity*uPower);}`}));earthGroup.add(atmo);
 
 const cloudWorld=new THREE.Group();scene.add(cloudWorld);
@@ -139,9 +142,18 @@ function smokeTexture(){const s=128,c=document.createElement('canvas');c.width=c
 const smokeTex=smokeTexture();const smokeSprites=[];
 for(let i=0;i<17;i++){const cx=(R()-.5)*180,cz=20-R()*400;for(let j=0;j<5;j++){const sm=new THREE.Sprite(new THREE.SpriteMaterial({map:smokeTex,color:0xa5aaa7,transparent:true,opacity:.0,depthWrite:false}));sm.position.set(cx+(R()-.5)*9,7+j*7+R()*5,cz+(R()-.5)*8);const ss=18+j*7+R()*12;sm.scale.set(ss,ss,1);city.add(sm);smokeSprites.push(sm)}}
 
+// ---------- TIMELINE ----------
 let smooth=0,last=performance.now();
 const look=new THREE.Vector3();
-function earthPath(t){const p=seg(t,0,EARTH_END);const e=Math.pow(p,2.22);return{pos:new THREE.Vector3(0,.02,lerp(4.05,1.13,e)),look:new THREE.Vector3(0,.02,0),fov:lerp(49,72,Math.pow(p,4.6))}}
+const earthKeys=[
+ [0.00,2.94,50.0],[0.50,2.90,50.0],[1.00,2.57,50.5],[1.25,2.06,51.5],[1.50,1.56,54.0],[1.75,1.225,58.5],[1.95,1.075,63.5],[2.12,1.018,68.0]
+];
+function earthSample(t){
+ if(t<=earthKeys[0][0])return {z:earthKeys[0][1],f:earthKeys[0][2]};
+ for(let i=1;i<earthKeys.length;i++){const a=earthKeys[i-1],b=earthKeys[i];if(t<=b[0]){let q=clamp((t-a[0])/(b[0]-a[0]));q=smoothstep(q);return{z:lerp(a[1],b[1],q),f:lerp(a[2],b[2],q)}}}
+ const k=earthKeys[earthKeys.length-1];return{z:k[1],f:k[2]};
+}
+function earthPath(t){const p=seg(t,0,EARTH_END),k=earthSample(t);const dive=seg(t,1.42,2.12);return{pos:new THREE.Vector3(lerp(0,.018,dive),lerp(.015,.075,dive),k.z),look:new THREE.Vector3(lerp(0,.01,dive),lerp(.03,.115,dive),0),fov:k.f}}
 function cloudPath(t){const p=seg(t,EARTH_END,CLOUDS_END),e=smoothstep(p);const y=lerp(95,25,e),z=lerp(125,-58,e),x=lerp(0,5,Math.sin(p*Math.PI)*.6);return{pos:new THREE.Vector3(x,y,z),look:new THREE.Vector3(lerp(0,-2,p),lerp(42,12,e),lerp(-90,-135,e)),fov:lerp(66,58,p)}}
 function cityPath(t){const p=seg(t,CLOUDS_END,TOTAL),e=smoothstep(p);const z=lerp(58,-330,e),y=lerp(34,18,e),x=Math.sin(p*Math.PI*2.2)*8 + lerp(0,-3,p);return{pos:new THREE.Vector3(x,y,z),look:new THREE.Vector3(x*.15,lerp(9,8,p),z-70),fov:lerp(59,66,p)}}
 function pathAt(t){return t<=EARTH_END?earthPath(t):t<=CLOUDS_END?cloudPath(t):cityPath(t)}
@@ -150,14 +162,18 @@ function animate(now){requestAnimationFrame(animate);const dt=Math.min((now-last
  const max=document.documentElement.scrollHeight-innerHeight,target=max>0?scrollY/max:0;smooth+=(target-smooth)*(1-Math.exp(-6.8*dt));const t=smooth*TOTAL;const p=pathAt(t);
  camera.position.copy(p.pos);look.lerp(p.look,1-Math.exp(-13*dt));camera.lookAt(look);if(Math.abs(camera.fov-p.fov)>.02){camera.fov=p.fov;camera.updateProjectionMatrix()}
  earth.rotation.y+=dt*.006;earthClouds.rotation.y+=dt*.012;
- const earthFade=1-seg(t,1.88,2.25);earthGroup.visible=earthFade>.01;spaceGroup.visible=earthFade>.01;earthMat.opacity=earthFade;earthMat.transparent=earthFade<.999;cloudMat.opacity=.53*earthFade;atmoUniforms.uOpacity.value=.82*earthFade;atmoUniforms.uPower.value=1+seg(t,1.58,2.1)*1.2;
- const cIn=seg(t,1.88,2.34),cOut=1-seg(t,4.55,5.24),cAlpha=cIn*cOut;cloudWorld.visible=cAlpha>.005;for(const sp of cloudSprites)sp.material.opacity=(sp.material===cloudMats[0]? .72:sp.material===cloudMats[1]?.58:.46)*cAlpha;
+ // phase fades
+ const earthFade=1-seg(t,2.02,2.24);earthGroup.visible=earthFade>.01;spaceGroup.visible=earthFade>.01;earthMat.opacity=earthFade;earthMat.transparent=earthFade<.999;cloudMat.opacity=.62*earthFade;atmoUniforms.uOpacity.value=.92*earthFade;atmoUniforms.uPower.value=1.22+seg(t,1.48,2.1)*1.65;
+ const cIn=seg(t,2.06,2.34),cOut=1-seg(t,4.55,5.24),cAlpha=cIn*cOut;cloudWorld.visible=cAlpha>.005;for(const sp of cloudSprites)sp.material.opacity=(sp.material===cloudMats[0]? .72:sp.material===cloudMats[1]?.58:.46)*cAlpha;
  const cityIn=seg(t,4.38,5.12);city.visible=cityIn>.005;for(const sm of smokeSprites)sm.material.opacity=.22*cityIn;
- sky.visible=t>1.82;sky.position.copy(camera.position);skyMat.uniforms.uOpacity.value=seg(t,1.82,2.35);skyMat.uniforms.uMix.value=seg(t,4.2,5.55);
- if(t<EARTH_END-.18){scene.fog.near=900;scene.fog.far=1600;scene.fog.color.set(0x020611)}
+ // atmospheric color + fog
+ sky.visible=t>2.02;sky.position.copy(camera.position);skyMat.uniforms.uOpacity.value=seg(t,2.02,2.35);skyMat.uniforms.uMix.value=seg(t,4.2,5.55);
+ if(t<2.02){scene.fog.near=900;scene.fog.far=1600;scene.fog.color.set(0x020611)}
  else if(t<CLOUDS_END){const cp=seg(t,EARTH_END,CLOUDS_END),inside=Math.sin(cp*Math.PI);scene.fog.near=lerp(80,5,inside);scene.fog.far=lerp(420,70,inside);scene.fog.color.set(0xc8d2d7).lerp(new THREE.Color(0xa7b1b6),inside)}
  else{const cp=seg(t,CLOUDS_END,TOTAL);scene.fog.near=18;scene.fog.far=lerp(185,145,cp);scene.fog.color.set(0xb0b5b2)}
- hemi.intensity=t<CLOUDS_END?1.0:1.32;sun.intensity=t<CLOUDS_END?4.4:2.6;renderer.toneMappingExposure=t<CLOUDS_END?1.03:.92;
+ hemi.intensity=t<EARTH_END?1.18:t<CLOUDS_END?1.0:1.32;sun.intensity=t<EARTH_END?3.35:t<CLOUDS_END?4.4:2.6;renderer.toneMappingExposure=t<EARTH_END?1.14:t<CLOUDS_END?1.03:.92;
+ const speedBlur=t<EARTH_END?seg(t,1.52,2.10)*1.15:0;renderer.domElement.style.filter=speedBlur>.01?`blur(${speedBlur.toFixed(2)}px) saturate(${(1.04+speedBlur*.05).toFixed(2)}) contrast(1.03)`:'';
+ document.getElementById('spark').style.opacity=t<4.82?String(.34*(1-seg(t,4.55,4.82))):'0';
  renderer.render(scene,camera);
 }
 requestAnimationFrame(animate);
