@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Atlas Descent — Gaza Sequence V22</title>
+<title>Atlas Descent — Gaza Sequence V23</title>
 <style>
 :root{--mix:0;--grade:0;--end:0}*{box-sizing:border-box}html,body{margin:0;background:#020611;overflow-x:hidden}html{overscroll-behavior-y:none}body{height:1000.5vh;touch-action:pan-y}
 #baseWrap,#cityWrap,#grade,#endTitle{position:fixed;inset:0;width:100%;height:100dvh;pointer-events:none;overflow:hidden}
@@ -14,7 +14,7 @@
 </style>
 </head>
 <body>
-<div id="baseWrap"><iframe id="base" src="./base-v22.html?v=22" title="Earth and cloud sequence"></iframe></div>
+<div id="baseWrap"><iframe id="base" src="./base-v23.html?v=23" title="Earth and cloud sequence"></iframe></div>
 <div id="cityWrap"><div id="city"></div></div><div id="grade"></div>
 <div id="endTitle"><div class="inner"><div class="name">Mohanad Al-Mashharawi</div><div class="role">GIS Engineer</div></div></div>
 <script>
@@ -26,6 +26,6 @@ addEventListener('scroll',update,{passive:true});addEventListener('resize',updat
 function frame(){requestAnimationFrame(frame);const p=target,t=p*TOTAL,mix=cityReady?ease(clamp((t-CITY_PEEK)/(CITY_FULL-CITY_PEEK))):0;root.style.setProperty('--mix',mix.toFixed(4));root.style.setProperty('--grade',(cityReady?ease(clamp((t-4.80)/.62)):0).toFixed(4));const end=cityReady?ease(clamp((t-9.34)/.44)):0;root.style.setProperty('--end',end.toFixed(4));if(baseReady){const bt=Math.min(t,CLOUD_END),bp=bt/TOTAL;if(Math.abs(bp-last)>.00001){try{const w=base.contentWindow,m=w.document.documentElement.scrollHeight-w.innerHeight;w.scrollTo(0,bp*m);last=bp}catch(e){}}}}
 requestAnimationFrame(frame);
 </script>
-<script type="module" src="./city-v20.js?v=22"></script>
+<script type="module" src="./city-v20.js?v=23"></script>
 </body>
 </html>
